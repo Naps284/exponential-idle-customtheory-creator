@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exponential Idle - Theory Editor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .section-title { @apply text-xl font-semibold mb-4 border-b pb-2 text-gray-700; }
+        .subsection-title { @apply text-lg font-medium mb-3 text-gray-600; }
+        .input-label { @apply block text-sm font-medium text-gray-600 mb-1; }
+        .input-field { @apply w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm transition duration-150 ease-in-out; }
+        /* Style for invalid fields */
+        .input-field.invalid { @apply border-red-500 ring-1 ring-red-500; }
+        .textarea-field {
+            @apply w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 font-mono text-sm transition duration-150 ease-in-out;
+             min-height: 6em; background-color: #ffffff; color: #1f2937;
+        }
+        .textarea-field.invalid { @apply border-red-500 ring-1 ring-red-500; }
+         .js-textarea { font-family: 'Fira Code', 'Consolas', 'Monaco', 'Andale Mono', 'Ubuntu Mono', monospace !important; }
+        .select-field { @apply w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 bg-white text-sm; }
+        .checkbox-label { @apply ml-2 text-sm text-gray-700; }
+        .checkbox-field { @apply h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500; }
+        .button-primary { @apply px-4 py-2 bg-indigo-600 text-white rounded-md shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-150 ease-in-out; }
+        .button-secondary { @apply px-4 py-2 bg-gray-200 text-gray-700 rounded-md shadow-sm hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 transition duration-150 ease-in-out; }
+        .button-danger { @apply px-3 py-1 bg-red-500 text-white rounded-md shadow-sm hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-400 text-xs transition duration-150 ease-in-out; }
+        .upgrade-card { @apply p-4 border border-gray-300 rounded-lg mb-4 bg-white shadow; }
+        .template { display: none; }
+        #output-code { background-color: #1e1e1e; color: #d4d4d4; font-family: 'Fira Code', 'Consolas', 'Monaco', 'Andale Mono', 'Ubuntu Mono', monospace !important; }
+        /* Message area styles */
+        #message-area { @apply mb-4 p-3 rounded-md text-sm; }
+        #message-area.success { @apply bg-green-100 border border-green-300 text-green-800; }
+        #message-area.error { @apply bg-red-100 border border-red-300 text-red-800; }
+        #message-area:empty { @apply hidden; } /* Hide when empty */
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code&display=swap" rel="stylesheet">
+</head>
+<body class="bg-gray-100 p-4 md:p-8">
+
+    <div class="max-w-6xl mx-auto bg-white p-6 rounded-lg shadow-xl">
+
+        <header class="mb-6 border-b pb-4">
+            <h1 class="text-3xl font-bold text-gray-800">Exponential Idle - Theory Editor</h1>
+            <p class="text-gray-500">Create and edit custom theories visually.</p>
+        </header>
+
+        <div class="mb-6 flex space-x-3">
+            <button id="btn-new" class="button-primary">New Theory</button>
+            <button id="btn-load" class="button-secondary">Load Theory (Not Implemented)</button>
+            <button id="btn-save" class="button-primary">Generate JS Code</button>
+        </div>
+
+        <div id="message-area"></div>
+
+        <main class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+            <div class="space-y-6">
+                <section id="metadata-section" class="p-4 border rounded-md bg-gray-50">
+                     <h2 class="section-title">Theory Metadata</h2>
+                     <div class="space-y-3">
+                         <div><label for="theory-id" class="input-label">Theory ID:</label><input type="text" id="theory-id" class="input-field" placeholder="e.g., my_cool_theory" required></div>
+                         <div><label for="theory-name" class="input-label">Theory Name:</label><input type="text" id="theory-name" class="input-field" placeholder="e.g., My Cool Theory" required></div>
+                         <div><label for="theory-desc" class="input-label">Description:</label><textarea id="theory-desc" rows="3" class="textarea-field" placeholder="A brief description of the theory."></textarea></div>
+                         <div><label for="theory-authors" class="input-label">Author(s):</label><input type="text" id="theory-authors" class="input-field" placeholder="e.g., Your Name"></div>
+                         <div><label for="theory-version" class="input-label">Version:</label><input type="number" id="theory-version" class="input-field" value="1" min="1"></div>
+                     </div>
+                </section>
+
+                <section id="upgrades-section" class="p-4 border rounded-md bg-gray-50">
+                    <h2 class="section-title">Upgrades</h2>
+                    <div class="mb-6 border-b pb-4">
+                        <h3 class="subsection-title">Regular Upgrades</h3>
+                        <div id="regular-upgrades-container" class="space-y-4"></div>
+                        <button id="btn-add-regular-upgrade" class="button-secondary mt-4 text-sm">Add Regular Upgrade</button>
+                    </div>
+                    <div class="mb-6 border-b pb-4">
+                        <h3 class="subsection-title">Permanent Upgrades</h3>
+                        <div class="space-y-4">
+                            <div class="flex items-center space-x-4 p-3 border rounded-md bg-white">
+                                <input type="checkbox" id="perm-pub-enable" class="checkbox-field" checked>
+                                <label for="perm-pub-enable" class="flex-grow text-sm font-medium text-gray-700">Publication Upgrade (ID: 0)</label>
+                                <div><label for="perm-pub-cost" class="input-label text-xs">Cost:</label><input type="text" id="perm-pub-cost" class="input-field text-xs w-28" placeholder="e.g., 1e10"></div>
+                            </div>
+                            <div class="flex items-center space-x-4 p-3 border rounded-md bg-white">
+                                <input type="checkbox" id="perm-buyall-enable" class="checkbox-field" checked>
+                                <label for="perm-buyall-enable" class="flex-grow text-sm font-medium text-gray-700">Buy All Upgrade (ID: 1)</label>
+                                <div><label for="perm-buyall-cost" class="input-label text-xs">Cost:</label><input type="text" id="perm-buyall-cost" class="input-field text-xs w-28" placeholder="e.g., 1e13"></div>
+                            </div>
+                             <div class="flex items-center space-x-4 p-3 border rounded-md bg-white">
+                                <input type="checkbox" id="perm-autobuyer-enable" class="checkbox-field" checked>
+                                <label for="perm-autobuyer-enable" class="flex-grow text-sm font-medium text-gray-700">AutoBuyer Upgrade (ID: 2)</label>
+                                <div><label for="perm-autobuyer-cost" class="input-label text-xs">Cost:</label><input type="text" id="perm-autobuyer-cost" class="input-field text-xs w-28" placeholder="e.g., 1e30"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <h3 class="subsection-title">Milestone Upgrades</h3>
+                        <div class="mb-4 p-3 border rounded-md bg-white">
+                            <label class="input-label font-medium">Overall Milestone Cost:</label>
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-2">
+                                <div><label class="input-label text-xs">Type:</label><select id="milestone-cost-type" class="select-field"><option value="LinearCost" selected>Linear</option><option value="ExponentialCost">Exponential</option></select></div>
+                                <div id="milestone-cost-params" class="space-y-2"><div><label class="input-label text-xs">Initial Cost (b):</label><input type="text" id="milestone-cost-param1" class="input-field" placeholder="e.g., 25"></div><div><label class="input-label text-xs">Cost Step (m):</label><input type="text" id="milestone-cost-param2" class="input-field" placeholder="e.g., 25"></div></div>
+                            </div>
+                        </div>
+                        <div id="milestone-upgrades-container" class="space-y-4"></div>
+                        <button id="btn-add-milestone-upgrade" class="button-secondary mt-4 text-sm">Add Milestone Upgrade</button>
+                    </div>
+                </section>
+
+                <section id="equations-section" class="p-4 border rounded-md bg-gray-50">
+                    <h2 class="section-title">Equations (Core Formulas)</h2>
+                     <div class="space-y-3">
+                        <div><label for="eq-primary" class="input-label">Primary Equation (LaTeX):</label><textarea id="eq-primary" rows="3" class="textarea-field" placeholder="e.g., \\dot{\\rho} = c_1 c_2"></textarea></div>
+                        <div><label for="eq-secondary" class="input-label">Secondary Equation (JS returning LaTeX):</label><textarea id="eq-secondary" rows="2" class="textarea-field js-textarea" placeholder="e.g., return theory.latexSymbol + '=\\max\\rho';"></textarea></div>
+                        <div><label for="eq-tertiary" class="input-label">Tertiary Equation (JS returning LaTeX):</label><textarea id="eq-tertiary" rows="2" class="textarea-field js-textarea" placeholder="Optional, e.g., return 'q=' + q.toString();"></textarea></div>
+                        <div><label for="eq-pubmult-formula" class="input-label">Publication Multiplier Formula (JS returning LaTeX):</label><textarea id="eq-pubmult-formula" rows="2" class="textarea-field js-textarea" placeholder="e.g., return `\\frac{{${symbol}}^{0.164}}{3}`;"></textarea></div>
+                    </div>
+                </section>
+
+                 <section id="logic-section" class="p-4 border rounded-md bg-gray-50">
+                    <h2 class="section-title">Core Logic (JavaScript Functions)</h2>
+                     <div class="space-y-3">
+                        <div><label for="logic-init" class="input-label"><code>init = () => { ... }</code></label><textarea id="logic-init" rows="8" class="textarea-field js-textarea" placeholder="Initialize currencies, upgrades, etc."></textarea></div>
+                        <div><label for="logic-tick" class="input-label"><code>tick = (elapsedTime, multiplier) => { ... }</code></label><textarea id="logic-tick" rows="8" class="textarea-field js-textarea" placeholder="Define the core game loop logic."></textarea></div>
+                        <div><label for="logic-gettau" class="input-label"><code>getTau = () => { ... }</code></label><textarea id="logic-gettau" rows="3" class="textarea-field js-textarea" placeholder="Return the value for tau. e.g., return currency.value;"></textarea></div>
+                        <div><label for="logic-getpubmult" class="input-label"><code>getPublicationMultiplier = (tau) => { ... }</code></label><textarea id="logic-getpubmult" rows="3" class="textarea-field js-textarea" placeholder="Calculate publication multiplier. e.g., return tau.pow(0.1) / 10;"></textarea></div>
+                        <div><label for="logic-postpub" class="input-label"><code>postPublish = () => { ... }</code></label><textarea id="logic-postpub" rows="3" class="textarea-field js-textarea" placeholder="Code to run after publishing. e.g., currency.value = 0;"></textarea></div>
+                         <div><label for="logic-helpers" class="input-label">Other Helper Functions:</label><textarea id="logic-helpers" rows="6" class="textarea-field js-textarea" placeholder="Define any other functions needed, e.g., getC1(level), updateAvailability()"></textarea></div>
+                    </div>
+                </section>
+            </div>
+
+            <div class="space-y-6">
+                <section id="output-section" class="p-4 border rounded-md bg-gray-800 h-[80vh] flex flex-col">
+                    <h2 class="section-title text-gray-200 border-gray-600">Generated JavaScript Code</h2>
+                    <textarea id="output-code" class="textarea-field flex-grow resize-none" readonly placeholder="Click 'Generate JS Code' to see the output..."></textarea>
+                    <button id="btn-copy" class="button-secondary mt-3 self-start">Copy Code</button>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <div id="regular-upgrade-template" class="upgrade-card template">
+         <div class="flex justify-between items-center mb-3"><h4 class="text-md font-semibold text-indigo-700">Regular Upgrade</h4><button class="btn-remove-upgrade button-danger">Remove</button></div>
+         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+             <div><label class="input-label">Variable Name:</label><input type="text" class="input-field upgrade-varname" placeholder="e.g., c1" required></div>
+             <div><label class="input-label">Upgrade ID (Index):</label><input type="number" class="input-field upgrade-id" placeholder="e.g., 0" min="0" required></div>
+         </div>
+         <div class="mt-3"><label class="input-label">Cost:</label><div class="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 border rounded-md bg-gray-50"><div><label class="input-label text-xs">Type:</label><select class="select-field upgrade-cost-type"><option value="ExponentialCost">Exponential</option><option value="LinearCost">Linear</option><option value="FreeCost">Free</option><option value="FirstFreeCost">FirstFree</option></select></div><div class="upgrade-cost-params space-y-2"><div><label class="input-label text-xs">Initial Cost:</label><input type="text" class="input-field upgrade-cost-param1" placeholder="e.g., 10"></div><div><label class="input-label text-xs">Cost Growth (log2):</label><input type="text" class="input-field upgrade-cost-param2" placeholder="e.g., Math.log2(2)"></div></div></div></div>
+         <div class="mt-3"><label class="input-label">Description Logic (JS):</label><textarea rows="2" class="textarea-field js-textarea upgrade-desc-logic" placeholder="e.g., return Utils.getMath(`c_1=${getC1(level)}`);"></textarea></div>
+         <div class="mt-3"><label class="input-label">Info Logic (JS):</label><textarea rows="2" class="textarea-field js-textarea upgrade-info-logic" placeholder="e.g., return Utils.getMathTo(getDesc(level), getDesc(level + amount));"></textarea></div>
+         <div class="mt-3"><label class="input-label">Optional Helper Function (JS):</label><textarea rows="3" class="textarea-field js-textarea upgrade-helper-func" placeholder="e.g., var getC1 = (level) => Utils.getStepwisePowerSum(level, 2, 10, 0);"></textarea></div>
+    </div>
+
+     <div id="milestone-upgrade-template" class="upgrade-card template">
+         <div class="flex justify-between items-center mb-3"><h4 class="text-md font-semibold text-purple-700">Milestone Upgrade</h4><button class="btn-remove-upgrade button-danger">Remove</button></div>
+         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+             <div><label class="input-label">Variable Name:</label><input type="text" class="input-field milestone-varname" placeholder="e.g., c1Exp" required></div>
+             <div><label class="input-label">Milestone ID (Index):</label><input type="number" class="input-field milestone-id" placeholder="e.g., 0" min="0" required></div>
+             <div><label class="input-label">Max Level:</label><input type="number" class="input-field milestone-maxlevel" placeholder="e.g., 3" min="1" required></div>
+         </div>
+         <div class="mt-3"><label class="input-label">Description (JS returning String):</label><textarea rows="2" class="textarea-field js-textarea milestone-desc-logic" placeholder="e.g., return Localization.getUpgradeIncCustomExpDesc('c_1', '0.05');"></textarea></div>
+         <div class="mt-3"><label class="input-label">Info (JS returning String):</label><textarea rows="2" class="textarea-field js-textarea milestone-info-logic" placeholder="e.g., return Localization.getUpgradeIncCustomExpInfo('c_1', '0.05');"></textarea></div>
+         <div class="mt-3"><label class="input-label"><code>boughtOrRefunded = (_) => { ... }</code> (JS):</label><textarea rows="2" class="textarea-field js-textarea milestone-bought-logic" placeholder="e.g., theory.invalidatePrimaryEquation(); updateAvailability();"></textarea></div>
+         <div class="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div><label class="input-label"><code>isAvailable = (_) => { ... }</code> (Optional JS):</label><textarea rows="2" class="textarea-field js-textarea milestone-available-logic" placeholder="e.g., return c1Exp.level > 0;"></textarea></div>
+              <div><label class="input-label"><code>canBeRefunded = (_) => { ... }</code> (Optional JS):</label><textarea rows="2" class="textarea-field js-textarea milestone-refund-logic" placeholder="e.g., return c2Exp.level == 0;"></textarea></div>
+         </div>
+    </div>
+
+    <script>
+        // Get references to elements
+        const btnNew = document.getElementById('btn-new');
+        const btnLoad = document.getElementById('btn-load');
+        const btnSave = document.getElementById('btn-save');
+        const btnCopy = document.getElementById('btn-copy');
+        const outputCodeElement = document.getElementById('output-code');
+        const messageArea = document.getElementById('message-area'); // Message area element
+
+        // Input fields for direct validation
+        const theoryIdInput = document.getElementById('theory-id');
+        const theoryNameInput = document.getElementById('theory-name');
+
+        // Containers and templates
+        const regularUpgradesContainer = document.getElementById('regular-upgrades-container');
+        const regularUpgradeTemplate = document.getElementById('regular-upgrade-template');
+        const milestoneUpgradesContainer = document.getElementById('milestone-upgrades-container');
+        const milestoneUpgradeTemplate = document.getElementById('milestone-upgrade-template');
+
+        // Buttons
+        const btnAddRegularUpgrade = document.getElementById('btn-add-regular-upgrade');
+        const btnAddMilestoneUpgrade = document.getElementById('btn-add-milestone-upgrade');
+
+        // Permanent Upgrades
+        const permPubEnable = document.getElementById('perm-pub-enable');
+        const permPubCost = document.getElementById('perm-pub-cost');
+        const permBuyAllEnable = document.getElementById('perm-buyall-enable');
+        const permBuyAllCost = document.getElementById('perm-buyall-cost');
+        const permAutoBuyerEnable = document.getElementById('perm-autobuyer-enable');
+        const permAutoBuyerCost = document.getElementById('perm-autobuyer-cost');
+
+        // Milestone Upgrades Cost
+        const milestoneCostTypeSelect = document.getElementById('milestone-cost-type');
+        const milestoneCostParamsContainer = document.getElementById('milestone-cost-params');
+
+        // --- Data Structure ---
+        let currentTheory = { /* ... same structure ... */ };
+
+        // --- Utility Functions ---
+        function showMessage(message, type = 'info') {
+            messageArea.textContent = message;
+            messageArea.className = 'mb-4 p-3 rounded-md text-sm'; // Reset classes
+            if (type === 'success') {
+                messageArea.classList.add('bg-green-100', 'border', 'border-green-300', 'text-green-800');
+            } else if (type === 'error') {
+                messageArea.classList.add('bg-red-100', 'border', 'border-red-300', 'text-red-800');
+            } else { // info or default
+                messageArea.classList.add('bg-blue-100', 'border', 'border-blue-300', 'text-blue-800');
+            }
+        }
+
+        function clearMessage() {
+            messageArea.textContent = '';
+            messageArea.className = 'mb-4 p-3 rounded-md text-sm'; // Reset classes
+            messageArea.classList.add('hidden');
+        }
+
+        function setInvalid(element) {
+             if (element) element.classList.add('invalid');
+        }
+
+        function setValid(element) {
+             if (element) element.classList.remove('invalid');
+        }
+
+        function clearAllValidationStyles() {
+            document.querySelectorAll('.invalid').forEach(el => el.classList.remove('invalid'));
+        }
+
+        // --- General Functions ---
+        function clearEditor() {
+            clearAllValidationStyles(); // Clear validation styles
+            clearMessage(); // Clear any messages
+            // Clear fields as before
+            theoryIdInput.value = '';
+            theoryNameInput.value = '';
+            document.getElementById('theory-desc').value = '';
+            document.getElementById('theory-authors').value = '';
+            document.getElementById('theory-version').value = '1';
+            document.getElementById('eq-primary').value = '';
+            document.getElementById('eq-secondary').value = '';
+            document.getElementById('eq-tertiary').value = '';
+            document.getElementById('eq-pubmult-formula').value = '';
+            document.getElementById('logic-init').value = '';
+            document.getElementById('logic-tick').value = '';
+            document.getElementById('logic-gettau').value = '';
+            document.getElementById('logic-getpubmult').value = '';
+            document.getElementById('logic-postpub').value = '';
+            document.getElementById('logic-helpers').value = '';
+            outputCodeElement.value = '';
+            regularUpgradesContainer.innerHTML = '';
+            permPubEnable.checked = true; permPubCost.value = '';
+            permBuyAllEnable.checked = true; permBuyAllCost.value = '';
+            permAutoBuyerEnable.checked = true; permAutoBuyerCost.value = '';
+            milestoneCostTypeSelect.value = 'LinearCost';
+            updateMilestoneCostParamsUI();
+             document.getElementById('milestone-cost-param1').value = '';
+            document.getElementById('milestone-cost-param2').value = '';
+            milestoneUpgradesContainer.innerHTML = '';
+            currentTheory = { regularUpgrades: [], permanentUpgrades: {}, milestoneCost: {}, milestoneUpgrades: [] };
+            console.log("Theory data cleared.");
+        }
+
+        // --- Cost UI Functions ---
+        function updateCostParamsUI(costType, paramsContainer, p1Class = 'upgrade-cost-param1', p2Class = 'upgrade-cost-param2') {
+             paramsContainer.innerHTML = '';
+            let fields = [];
+            switch(costType) {
+                case 'ExponentialCost': fields = [{ label: 'Initial Cost:', placeholder: 'e.g., 10', class: p1Class }, { label: 'Cost Growth (log2):', placeholder: 'e.g., Math.log2(2)', class: p2Class }]; break;
+                case 'LinearCost': fields = [{ label: 'Initial Cost (b):', placeholder: 'e.g., 25', class: p1Class }, { label: 'Cost Step (m):', placeholder: 'e.g., 25', class: p2Class }]; break;
+                case 'FreeCost': paramsContainer.innerHTML = '<p class="text-xs text-gray-500 italic">No parameters needed.</p>'; break;
+                case 'FirstFreeCost':
+                     paramsContainer.innerHTML = '<p class="text-xs text-gray-500 italic mb-2">Nested Cost (Assuming Exponential):</p>';
+                     fields = [{ label: 'Initial Cost:', placeholder: 'e.g., 15', class: p1Class }, { label: 'Cost Growth (log2):', placeholder: 'e.g., Math.log2(2)', class: p2Class }]; break;
+            }
+            fields.forEach(field => {
+                const div = document.createElement('div');
+                const label = document.createElement('label'); label.className = 'input-label text-xs'; label.textContent = field.label;
+                const input = document.createElement('input'); input.type = 'text'; input.className = `input-field ${field.class}`; input.placeholder = field.placeholder;
+                // Clear validation on input
+                input.addEventListener('input', () => setValid(input));
+                div.appendChild(label); div.appendChild(input); paramsContainer.appendChild(div);
+            });
+        }
+
+         // --- Regular Upgrade Functions ---
+        function addRegularUpgrade() {
+            const templateClone = regularUpgradeTemplate.cloneNode(true);
+            templateClone.classList.remove('template'); templateClone.removeAttribute('id');
+            const removeBtn = templateClone.querySelector('.btn-remove-upgrade');
+            removeBtn.addEventListener('click', () => {
+                 // Clear validation from children before removing
+                 templateClone.querySelectorAll('.invalid').forEach(el => setValid(el));
+                 templateClone.remove();
+            });
+            const costTypeSelect = templateClone.querySelector('.upgrade-cost-type');
+            const paramsContainer = templateClone.querySelector('.upgrade-cost-params');
+            costTypeSelect.addEventListener('change', (event) => updateCostParamsUI(event.target.value, paramsContainer));
+            updateCostParamsUI(costTypeSelect.value, paramsContainer);
+            // Add input listeners to clear validation
+            templateClone.querySelectorAll('input, textarea').forEach(input => {
+                input.addEventListener('input', () => setValid(input));
+            });
+            regularUpgradesContainer.appendChild(templateClone);
+        }
+
+         // --- Milestone Upgrade Functions ---
+         function updateMilestoneCostParamsUI() {
+             updateCostParamsUI(milestoneCostTypeSelect.value, milestoneCostParamsContainer, 'milestone-cost-param1', 'milestone-cost-param2');
+         }
+
+         function addMilestoneUpgrade() {
+            const templateClone = milestoneUpgradeTemplate.cloneNode(true);
+            templateClone.classList.remove('template'); templateClone.removeAttribute('id');
+            const removeBtn = templateClone.querySelector('.btn-remove-upgrade');
+             removeBtn.addEventListener('click', () => {
+                 templateClone.querySelectorAll('.invalid').forEach(el => setValid(el));
+                 templateClone.remove();
+             });
+             // Add input listeners to clear validation
+            templateClone.querySelectorAll('input, textarea').forEach(input => {
+                input.addEventListener('input', () => setValid(input));
+            });
+            milestoneUpgradesContainer.appendChild(templateClone);
+         }
+
+
+        // --- Data Gathering ---
+        function gatherTheoryData() {
+            // Gathers data, no validation here
+             currentTheory = {
+                id: theoryIdInput.value.trim(),
+                name: theoryNameInput.value.trim(),
+                description: document.getElementById('theory-desc').value.trim(),
+                authors: document.getElementById('theory-authors').value.trim(),
+                version: parseInt(document.getElementById('theory-version').value) || 1,
+                primaryEquation: document.getElementById('eq-primary').value.trim(),
+                secondaryEquationLogic: document.getElementById('eq-secondary').value,
+                tertiaryEquationLogic: document.getElementById('eq-tertiary').value,
+                pubMultFormulaLogic: document.getElementById('eq-pubmult-formula').value,
+                initLogic: document.getElementById('logic-init').value,
+                tickLogic: document.getElementById('logic-tick').value,
+                getTauLogic: document.getElementById('logic-gettau').value,
+                getPubMultLogic: document.getElementById('logic-getpubmult').value,
+                postPublishLogic: document.getElementById('logic-postpub').value,
+                helperLogic: document.getElementById('logic-helpers').value,
+                regularUpgrades: [],
+                permanentUpgrades: { /* ... */ },
+                 milestoneCost: { /* ... */ },
+                milestoneUpgrades: []
+            };
+            // Gather permanent upgrades
+            currentTheory.permanentUpgrades = {
+                publication: { enabled: permPubEnable.checked, cost: permPubCost.value.trim() },
+                buyAll: { enabled: permBuyAllEnable.checked, cost: permBuyAllCost.value.trim() },
+                autoBuyer: { enabled: permAutoBuyerEnable.checked, cost: permAutoBuyerCost.value.trim() }
+            };
+            // Gather milestone cost
+            currentTheory.milestoneCost = {
+                type: milestoneCostTypeSelect.value,
+                param1: document.getElementById('milestone-cost-param1')?.value?.trim() || '',
+                param2: document.getElementById('milestone-cost-param2')?.value?.trim() || ''
+            };
+            // Gather regular upgrades
+            regularUpgradesContainer.querySelectorAll('.upgrade-card:not(.template)').forEach((card, index) => {
+                const costType = card.querySelector('.upgrade-cost-type').value;
+                const params = Array.from(card.querySelectorAll('.upgrade-cost-params input')).map(input => input.value.trim());
+                currentTheory.regularUpgrades.push({
+                    element: card, // Keep reference for validation styling
+                    varName: card.querySelector('.upgrade-varname').value.trim(),
+                    id: card.querySelector('.upgrade-id').value.trim(), // Keep as string for validation
+                    costType: costType, costParams: params,
+                    descriptionLogic: card.querySelector('.upgrade-desc-logic').value,
+                    infoLogic: card.querySelector('.upgrade-info-logic').value,
+                    helperFunc: card.querySelector('.upgrade-helper-func').value
+                });
+            });
+            // Gather milestone upgrades
+            milestoneUpgradesContainer.querySelectorAll('.upgrade-card:not(.template)').forEach((card, index) => {
+                 currentTheory.milestoneUpgrades.push({
+                    element: card, // Keep reference
+                    varName: card.querySelector('.milestone-varname').value.trim(),
+                    id: card.querySelector('.milestone-id').value.trim(), // Keep as string
+                    maxLevel: card.querySelector('.milestone-maxlevel').value.trim(), // Keep as string
+                    descriptionLogic: card.querySelector('.milestone-desc-logic').value,
+                    infoLogic: card.querySelector('.milestone-info-logic').value,
+                    boughtLogic: card.querySelector('.milestone-bought-logic').value,
+                    availableLogic: card.querySelector('.milestone-available-logic').value,
+                    refundLogic: card.querySelector('.milestone-refund-logic').value
+                });
+            });
+            return currentTheory; // Return gathered data
+        }
+
+        // --- Validation ---
+        function validateTheoryData(theoryData) {
+            clearAllValidationStyles();
+            let isValid = true;
+            let errors = [];
+            const regularUpgradeIds = new Set();
+            const milestoneUpgradeIds = new Set();
+
+            // Validate Metadata
+            if (!theoryData.id) {
+                isValid = false; errors.push("Theory ID is required."); setInvalid(theoryIdInput);
+            } else setValid(theoryIdInput);
+            if (!theoryData.name) {
+                isValid = false; errors.push("Theory Name is required."); setInvalid(theoryNameInput);
+            } else setValid(theoryNameInput);
+
+            // Validate Regular Upgrades
+            theoryData.regularUpgrades.forEach((upg, index) => {
+                const varNameInput = upg.element.querySelector('.upgrade-varname');
+                const idInput = upg.element.querySelector('.upgrade-id');
+                if (!upg.varName) { isValid = false; errors.push(`Regular Upgrade #${index+1}: Variable Name is required.`); setInvalid(varNameInput); } else setValid(varNameInput);
+                if (!upg.id || isNaN(parseInt(upg.id))) { isValid = false; errors.push(`Regular Upgrade #${index+1}: ID must be a number.`); setInvalid(idInput); }
+                else {
+                    const idNum = parseInt(upg.id);
+                    if (regularUpgradeIds.has(idNum)) { isValid = false; errors.push(`Regular Upgrade #${index+1}: ID ${idNum} is already used.`); setInvalid(idInput); }
+                    else { regularUpgradeIds.add(idNum); setValid(idInput); }
+                }
+                // TODO: Add cost parameter validation if needed
+            });
+
+            // Validate Milestone Upgrades
+            theoryData.milestoneUpgrades.forEach((ms, index) => {
+                 const varNameInput = ms.element.querySelector('.milestone-varname');
+                 const idInput = ms.element.querySelector('.milestone-id');
+                 const maxLevelInput = ms.element.querySelector('.milestone-maxlevel');
+                 if (!ms.varName) { isValid = false; errors.push(`Milestone Upgrade #${index+1}: Variable Name is required.`); setInvalid(varNameInput); } else setValid(varNameInput);
+                 if (!ms.id || isNaN(parseInt(ms.id))) { isValid = false; errors.push(`Milestone Upgrade #${index+1}: ID must be a number.`); setInvalid(idInput); }
+                 else {
+                     const idNum = parseInt(ms.id);
+                     if (milestoneUpgradeIds.has(idNum)) { isValid = false; errors.push(`Milestone Upgrade #${index+1}: ID ${idNum} is already used.`); setInvalid(idInput); }
+                     else { milestoneUpgradeIds.add(idNum); setValid(idInput); }
+                 }
+                 if (!ms.maxLevel || isNaN(parseInt(ms.maxLevel)) || parseInt(ms.maxLevel) < 1) { isValid = false; errors.push(`Milestone Upgrade #${index+1}: Max Level must be a positive number.`); setInvalid(maxLevelInput); } else setValid(maxLevelInput);
+            });
+
+            // TODO: Add more validation (e.g., permanent upgrade costs, milestone costs)
+
+            if (!isValid) {
+                showMessage("Validation Errors:\n- " + errors.join("\n- "), 'error');
+            } else {
+                clearMessage(); // Clear errors if valid
+            }
+            return isValid;
+        }
+
+
+        // --- Code Generation ---
+        function generateTheoryCode(theoryData) {
+            // ... (Code generation logic remains the same) ...
+             let helperFunctionsCode = theoryData.helperLogic || '';
+            let regularUpgradeInitCode = '';
+            let permanentUpgradeInitCode = '';
+            let milestoneUpgradeInitCode = '';
+            let milestoneCostCode = '';
+            let upgradeVarDeclarations = '';
+            theoryData.regularUpgrades.forEach(upg => { /* ... */ });
+            theoryData.milestoneUpgrades.forEach(ms => { /* ... */ });
+            if (theoryData.permanentUpgrades?.publication?.enabled && theoryData.permanentUpgrades.publication.cost) { /* ... */ }
+            if (theoryData.permanentUpgrades?.buyAll?.enabled && theoryData.permanentUpgrades.buyAll.cost) { /* ... */ }
+             if (theoryData.permanentUpgrades?.autoBuyer?.enabled && theoryData.permanentUpgrades.autoBuyer.cost) { /* ... */ }
+            if (theoryData.milestoneCost?.type && theoryData.milestoneCost.param1 && theoryData.milestoneCost.param2) { /* ... */ }
+            theoryData.milestoneUpgrades.forEach(ms => { /* ... */ });
+            return `// Generated by Theory Editor - ${new Date().toISOString()}...`; // Truncated
+        }
+
+        // --- Event Listeners ---
+        btnNew.addEventListener('click', clearEditor);
+        btnLoad.addEventListener('click', () => { clearMessage(); showMessage('Load Theory not implemented.', 'info'); });
+        btnSave.addEventListener('click', () => {
+            const data = gatherTheoryData(); // Gather data first
+            if (validateTheoryData(data)) { // Then validate
+                const generatedCode = generateTheoryCode(data); // Only generate if valid
+                outputCodeElement.value = generatedCode;
+                showMessage('JavaScript code generated successfully!', 'success');
+                console.log("Generated JS Code.");
+            } else {
+                outputCodeElement.value = ''; // Clear output on validation error
+                console.log("Validation failed.");
+            }
+        });
+        btnCopy.addEventListener('click', () => {
+             clearMessage();
+             const codeToCopy = outputCodeElement.value;
+            if (codeToCopy) {
+                navigator.clipboard.writeText(codeToCopy)
+                    .then(() => showMessage('Code copied to clipboard!', 'success'))
+                    .catch(err => { console.error('Failed to copy code: ', err); showMessage('Failed to copy code.', 'error'); });
+            } else { showMessage('Nothing to copy.', 'info'); }
+         });
+        btnAddRegularUpgrade.addEventListener('click', addRegularUpgrade);
+        milestoneCostTypeSelect.addEventListener('change', updateMilestoneCostParamsUI);
+        btnAddMilestoneUpgrade.addEventListener('click', addMilestoneUpgrade);
+        // Add listeners to clear validation on input for metadata fields
+        theoryIdInput.addEventListener('input', () => setValid(theoryIdInput));
+        theoryNameInput.addEventListener('input', () => setValid(theoryNameInput));
+
+
+        // --- Initial Setup ---
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log("Theory editor initialized.");
+            updateMilestoneCostParamsUI();
+            clearMessage(); // Ensure message area is hidden initially
+        });
+
+    </script>
+
+</body>
+</html>
